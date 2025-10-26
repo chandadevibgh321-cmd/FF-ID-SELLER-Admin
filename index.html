@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #1a202c; color: white; }
+        input, textarea { background-color: #2d3748; border-color: #4a5568; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        input:checked ~ .dot { transform: translateX(100%); background-color: #34D399; }
+        .status-pending { color: #fbbf24; }
+        .status-approved { color: #10b981; }
+        .status-rejected { color: #ef4444; }
+        .history-item { border-bottom: 1px solid #4a5568; padding: 12px 0; }
+        .proof-image { max-width: 300px; max-height: 200px; border-radius: 8px; cursor: pointer; border: 2px solid #4a5568; }
+        .proof-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .proof-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+    </style>
+</head>
+<body class="p-8">
+
+    <h1 class="text-4xl font-bold mb-8 text-center">Admin Panel</h1>
+
+    <div class="flex border-b border-gray-700 mb-6 overflow-x-auto">
+        <button data-tab="add-account" class="tab-btn py-2 px-4 text-white font-semibold border-b-2 border-blue-500">Add Account</button>
+        <button data-tab="requests" class="tab-btn py-2 px-4 text-gray-400 font-semibold">Deposit Requests</button>
+        <button data-tab="history" class="tab-btn py-2 px-4 text-gray-400 font-semibold">All History</button>
+        <button data-tab="users" class="tab-btn py-2 px-4 text-gray-400 font-semibold">User Registrations</button>
+        <button data-tab="settings" class="tab-btn py-2 px-4 text-gray-400 font-semibold">Settings</button>
+    </div>
+
+    <div id="add-account" class="tab-content active">
+        <h2 class="text-2xl font-bold mb-4">Add New Free Fire Account</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input type="text" id="name" placeholder="Account Name (e.g., Pro Season 1 ID)" class="p-2 rounded w-full">
+            <input type="number" id="price" placeholder="Price (e.g., 1500)" class="p-2 rounded w-full">
+            <input type="text" id="contact-link" placeholder="Owner Contact Link (WhatsApp, etc.)" class="p-2 rounded w-full">
+            <input type="text" id="main-image" placeholder="Main Display Image URL" class="p-2 rounded w-full">
+            <input type="text" id="ff-id" placeholder="Free Fire Login ID/Email" class="p-2 rounded w-full">
+            <input type="text" id="ff-password" placeholder="Free Fire Password" class="p-2 rounded w-full">
+            <textarea id="description" placeholder="Account Description" class="p-2 rounded w-full md:col-span-2 h-24"></textarea>
+            <div id="other-images-container" class="md:col-span-2">
+                 <p class="mb-2">Other Image URLs:</p>
+            </div>
+            <button id="add-image-field-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Add More Images</button>
+            <button id="submit-account-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded md:col-span-2">Add Account to Store</button>
+        </div>
+    </div>
+
+    <div id="requests" class="tab-content">
+        <h2 class="text-2xl font-bold mb-4">Pending Deposit Requests</h2>
+        <div id="requests-container" class="space-y-4">
+            <!-- Requests will be populated here -->
+        </div>
+    </div>
+
+    <div id="history" class="tab-content">
+        <h2 class="text-2xl font-bold mb-4">All Deposit History</h2>
+        
+        <div class="flex gap-2 mb-4">
+            <button class="tab-button bg-blue-600 text-white px-4 py-2 rounded" data-filter="all">All</button>
+            <button class="tab-button bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded" data-filter="pending">Pending</button>
+            <button class="tab-button bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded" data-filter="approved">Approved</button>
+            <button class="tab-button bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded" data-filter="rejected">Rejected</button>
+        </div>
+        
+        <div id="history-container" class="space-y-4 max-h-96 overflow-y-auto">
+            <!-- History will be populated here -->
+        </div>
+    </div>
+
+    <!-- NEW: User Registrations Tab -->
+    <div id="users" class="tab-content">
+        <h2 class="text-2xl font-bold mb-4">User Registrations</h2>
+        <p class="text-gray-400 mb-4">View all user registration details including email and password.</p>
+        
+        <div class="flex gap-2 mb-4">
+            <button class="tab-button bg-blue-600 text-white px-4 py-2 rounded" data-user-filter="all">All Users</button>
+            <button class="tab-button bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded" data-user-filter="today">Today</button>
+            <button class="tab-button bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded" data-user-filter="week">This Week</button>
+        </div>
+        
+        <div id="users-container" class="space-y-4 max-h-96 overflow-y-auto">
+            <!-- Users will be populated here -->
+        </div>
+    </div>
+
+    <div id="settings" class="tab-content">
+        <h2 class="text-2xl font-bold mb-4">General Settings</h2>
+        
+        <div class="space-y-6">
+            <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold">Disable Wallet & Buy System</h3>
+                    <p class="text-gray-400">If ON, users will only see "Contact Owner" button. (Users with existing balance can still buy).</p>
+                </div>
+                <label for="wallet-toggle" class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="wallet-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h3 class="font-bold mb-2">Customer Service Link</h3>
+                <p class="text-gray-400 mb-3">Set the customer service link that users will see.</p>
+                <div class="flex gap-2">
+                    <input type="text" id="customer-service-link" placeholder="https://wa.me/919876543210" class="p-2 rounded flex-1">
+                    <button id="save-service-link" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Save</button>
+                </div>
+            </div>
+
+            <!-- QR Scanner Change Section -->
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h3 class="font-bold mb-2">USER SCANNER CHANGE</h3>
+                <p class="text-gray-400 mb-3">Change the QR code that users see in deposit section.</p>
+                <div class="flex gap-2">
+                    <input type="text" id="qr-code-url" placeholder="Paste new QR code image URL here" class="p-2 rounded flex-1">
+                    <button id="save-qr-code" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Update QR Code</button>
+                </div>
+                <div class="mt-3">
+                    <p class="text-sm text-gray-400 mb-2">Current QR Code Preview:</p>
+                    <img id="current-qr-preview" src="" alt="Current QR Code" class="max-w-xs border-2 border-gray-600 rounded">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Reason Modal -->
+    <div id="reject-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">Reject Deposit Request</h3>
+            <p class="mb-2">Please provide a reason for rejection:</p>
+            <textarea id="reject-reason" placeholder="Enter rejection reason..." class="w-full p-2 rounded bg-gray-700 border border-gray-600 h-24 mb-4"></textarea>
+            <div class="flex gap-2">
+                <button id="confirm-reject-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Reject</button>
+                <button id="cancel-reject-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proof Image Modal -->
+    <div id="proof-modal" class="proof-modal hidden">
+        <img id="proof-modal-image" src="" alt="Deposit Proof">
+        <button id="close-proof-modal" class="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Close</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, get, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC6V_YBPPQbpteD-p069AcqlXS1YQy4Ozs",
+            authDomain: "ff-id-seller-acb19.firebaseapp.com",
+            databaseURL: "https://ff-id-seller-acb19-default-rtdb.firebaseio.com",
+            projectId: "ff-id-seller-acb19",
+            storageBucket: "ff-id-seller-acb19.firebasestorage.app",
+            messagingSenderId: "691395345107",
+            appId: "1:691395345107:web:cec0e29a16514e656fb226"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Variables for rejection modal
+        let currentRejectRequestId = null;
+
+        // --- Tab Logic ---
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => { 
+                    t.classList.remove('border-blue-500', 'text-white'); 
+                    t.classList.add('text-gray-400'); 
+                });
+                contents.forEach(c => c.classList.remove('active'));
+                tab.classList.add('border-blue-500', 'text-white');
+                tab.classList.remove('text-gray-400');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+                
+                // Load data when switching to specific tabs
+                if (tab.dataset.tab === 'requests') {
+                    loadRequests();
+                } else if (tab.dataset.tab === 'history') {
+                    loadAllHistory('all');
+                } else if (tab.dataset.tab === 'users') {
+                    loadUserRegistrations('all');
+                }
+            });
+        });
+
+        // --- Add Account Logic ---
+        document.getElementById('add-image-field-btn').addEventListener('click', () => {
+            const container = document.getElementById('other-images-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Another Image URL';
+            input.className = 'p-2 rounded w-full mt-2 other-image';
+            container.appendChild(input);
+        });
+
+        document.getElementById('submit-account-btn').addEventListener('click', () => {
+            const newAccount = {
+                name: document.getElementById('name').value,
+                price: parseFloat(document.getElementById('price').value),
+                contactLink: document.getElementById('contact-link').value,
+                mainImage: document.getElementById('main-image').value,
+                description: document.getElementById('description').value,
+                ffId: document.getElementById('ff-id').value,
+                ffPassword: document.getElementById('ff-password').value,
+                otherImages: Array.from(document.querySelectorAll('.other-image')).map(input => input.value).filter(Boolean),
+                createdAt: new Date().toISOString()
+            };
+
+            if (!newAccount.name || !newAccount.price || !newAccount.mainImage || !newAccount.ffId || !newAccount.ffPassword) {
+                alert('Please fill all required fields.');
+                return;
+            }
+
+            const accountsRef = ref(db, 'accounts');
+            push(accountsRef, newAccount).then(() => {
+                alert('Account added successfully!');
+                // Clear form
+                document.getElementById('name').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('contact-link').value = '';
+                document.getElementById('main-image').value = '';
+                document.getElementById('description').value = '';
+                document.getElementById('ff-id').value = '';
+                document.getElementById('ff-password').value = '';
+                document.getElementById('other-images-container').innerHTML = '<p class="mb-2">Other Image URLs:</p>';
+            }).catch(err => alert(err.message));
+        });
+
+        // --- Deposit Requests Logic ---
+        function loadRequests() {
+            const requestsRef = ref(db, 'depositRequests');
+            onValue(requestsRef, (snapshot) => {
+                const container = document.getElementById('requests-container');
+                container.innerHTML = '';
+                const data = snapshot.val();
+                
+                if (data) {
+                    let hasPending = false;
+                    
+                    Object.entries(data).forEach(([key, value]) => {
+                        if (value.status === 'pending') {
+                            hasPending = true;
+                            const requestDiv = document.createElement('div');
+                            requestDiv.className = 'bg-gray-800 p-4 rounded-lg';
+                            
+                            let proofHtml = '';
+                            if (value.proofImageBase64) {
+                                proofHtml = `
+                                    <div class="mt-3">
+                                        <p class="font-semibold mb-2">Deposit Proof:</p>
+                                        <img src="${value.proofImageBase64}" alt="Deposit Proof" class="proof-image" data-image="${value.proofImageBase64}">
+                                    </div>
+                                `;
+                            }
+                            
+                            requestDiv.innerHTML = `
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p><strong>User:</strong> ${value.userEmail}</p>
+                                        <p><strong>Payer Name:</strong> ${value.payerName}</p>
+                                        <p><strong>UTR:</strong> ${value.utr}</p>
+                                        <p><strong>Payment Method:</strong> ${value.paymentMethod || 'Not specified'}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-bold text-2xl text-yellow-400">₹${value.amount}</p>
+                                        <p class="text-sm text-gray-400">${new Date(value.timestamp).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                ${proofHtml}
+                                <div class="mt-4 flex gap-4">
+                                    <button data-req-id="${key}" data-user-id="${value.userId}" data-amount="${value.amount}" class="accept-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Accept</button>
+                                    <button data-req-id="${key}" class="reject-btn flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Reject</button>
+                                </div>
+                            `;
+                            container.appendChild(requestDiv);
+                        }
+                    });
+                    
+                    if (!hasPending) {
+                        container.innerHTML = '<p class="text-center py-4">No pending requests.</p>';
+                    }
+                } else {
+                    container.innerHTML = '<p class="text-center py-4">No pending requests.</p>';
+                }
+            });
+        }
+        
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('accept-btn')) {
+                e.target.disabled = true;
+                e.target.textContent = 'Processing...';
+
+                const { reqId, userId, amount } = e.target.dataset;
+                const userWalletRef = ref(db, `users/${userId}/wallet`);
+                
+                try {
+                    const userSnapshot = await get(userWalletRef);
+                    const currentBalance = userSnapshot.val() || 0;
+                    const newBalance = currentBalance + parseFloat(amount);
+                    
+                    // Update user wallet
+                    await set(userWalletRef, newBalance);
+                    
+                    // Update request status to approved
+                    await update(ref(db, `depositRequests/${reqId}`), {
+                        status: 'approved',
+                        processedAt: new Date().toISOString(),
+                        processedBy: 'Admin'
+                    });
+                    
+                    alert(`Successfully added ₹${amount} to ${userId}'s wallet.`);
+                } catch(err) {
+                    alert('Error: ' + err.message);
+                    e.target.disabled = false;
+                    e.target.textContent = 'Accept';
+                }
+            }
+            
+            if (e.target.classList.contains('reject-btn')) {
+                currentRejectRequestId = e.target.dataset.reqId;
+                document.getElementById('reject-modal').classList.remove('hidden');
+                document.getElementById('reject-reason').value = '';
+            }
+            
+            // Handle proof image click
+            if (e.target.classList.contains('proof-image')) {
+                const imageUrl = e.target.dataset.image;
+                document.getElementById('proof-modal-image').src = imageUrl;
+                document.getElementById('proof-modal').classList.remove('hidden');
+            }
+        });
+
+        // Rejection Modal Logic
+        document.getElementById('confirm-reject-btn').addEventListener('click', async () => {
+            const reason = document.getElementById('reject-reason').value.trim();
+            
+            if (!reason) {
+                alert('Please provide a rejection reason.');
+                return;
+            }
+            
+            try {
+                // Update request status to rejected with reason
+                await update(ref(db, `depositRequests/${currentRejectRequestId}`), {
+                    status: 'rejected',
+                    adminNote: reason,
+                    processedAt: new Date().toISOString(),
+                    processedBy: 'Admin'
+                });
+                
+                document.getElementById('reject-modal').classList.add('hidden');
+                alert('Request rejected successfully.');
+            } catch(err) {
+                alert('Error: ' + err.message);
+            }
+        });
+
+        document.getElementById('cancel-reject-btn').addEventListener('click', () => {
+            document.getElementById('reject-modal').classList.add('hidden');
+            currentRejectRequestId = null;
+        });
+
+        // Proof Modal Logic
+        document.getElementById('close-proof-modal').addEventListener('click', () => {
+            document.getElementById('proof-modal').classList.add('hidden');
+        });
+
+        document.getElementById('proof-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'proof-modal') {
+                document.getElementById('proof-modal').classList.add('hidden');
+            }
+        });
+
+        // --- All History Logic ---
+        function loadAllHistory(filter = 'all') {
+            const historyContainer = document.getElementById('history-container');
+            historyContainer.innerHTML = '<p class="text-center py-4">Loading...</p>';
+
+            const requestsRef = ref(db, 'depositRequests');
+            get(requestsRef).then((snapshot) => {
+                historyContainer.innerHTML = '';
+                const data = snapshot.val();
+                
+                if (!data) {
+                    historyContainer.innerHTML = '<p class="text-center py-4">No deposit history found.</p>';
+                    return;
+                }
+
+                let hasItems = false;
+                
+                Object.entries(data).forEach(([key, value]) => {
+                    if (filter === 'all' || value.status === filter) {
+                        hasItems = true;
+                        const historyItem = document.createElement('div');
+                        historyItem.className = 'bg-gray-800 p-4 rounded-lg';
+                        
+                        const date = new Date(value.timestamp).toLocaleString();
+                        const statusClass = `status-${value.status}`;
+                        
+                        let proofHtml = '';
+                        if (value.proofImageBase64) {
+                            proofHtml = `
+                                <div class="mt-2">
+                                    <p class="text-sm font-semibold">Deposit Proof:</p>
+                                    <img src="${value.proofImageBase64}" alt="Deposit Proof" class="proof-image mt-1" data-image="${value.proofImageBase64}">
+                                </div>
+                            `;
+                        }
+                        
+                        historyItem.innerHTML = `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p><strong>User:</strong> ${value.userEmail}</p>
+                                    <p><strong>Payer:</strong> ${value.payerName}</p>
+                                    <p><strong>UTR:</strong> ${value.utr}</p>
+                                    <p><strong>Method:</strong> ${value.paymentMethod || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-xl">₹${value.amount}</p>
+                                    <p class="text-sm text-gray-400">${date}</p>
+                                    ${value.processedAt ? `<p class="text-sm text-gray-400">Processed: ${new Date(value.processedAt).toLocaleString()}</p>` : ''}
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold ${statusClass} text-lg">${value.status.toUpperCase()}</p>
+                                    ${value.adminNote ? `<p class="text-sm text-gray-400 mt-1">Note: ${value.adminNote}</p>` : ''}
+                                </div>
+                            </div>
+                            ${proofHtml}
+                        `;
+                        
+                        historyContainer.appendChild(historyItem);
+                    }
+                });
+                
+                if (!hasItems) {
+                    historyContainer.innerHTML = `<p class="text-center py-4">No ${filter} deposits found.</p>`;
+                }
+            }).catch(err => {
+                console.error(err);
+                historyContainer.innerHTML = '<p class="text-center py-4 text-red-400">Error loading history.</p>';
+            });
+        }
+
+        // --- NEW: User Registrations Logic ---
+        function loadUserRegistrations(filter = 'all') {
+            const usersContainer = document.getElementById('users-container');
+            usersContainer.innerHTML = '<p class="text-center py-4">Loading...</p>';
+
+            const usersRef = ref(db, 'userRegistrations');
+            get(usersRef).then((snapshot) => {
+                usersContainer.innerHTML = '';
+                const data = snapshot.val();
+                
+                if (!data) {
+                    usersContainer.innerHTML = '<p class="text-center py-4">No user registrations found.</p>';
+                    return;
+                }
+
+                let hasItems = false;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                
+                Object.entries(data).forEach(([key, value]) => {
+                    const regDate = new Date(value.registeredAt);
+                    let showUser = false;
+                    
+                    if (filter === 'all') {
+                        showUser = true;
+                    } else if (filter === 'today' && regDate >= today) {
+                        showUser = true;
+                    } else if (filter === 'week' && regDate >= weekAgo) {
+                        showUser = true;
+                    }
+                    
+                    if (showUser) {
+                        hasItems = true;
+                        const userItem = document.createElement('div');
+                        userItem.className = 'bg-gray-800 p-4 rounded-lg';
+                        
+                        userItem.innerHTML = `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p><strong>User ID:</strong> ${value.userId}</p>
+                                    <p><strong>Email:</strong> ${value.userEmail}</p>
+                                    <p><strong>Password:</strong> ${value.userPassword}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">Registered: ${new Date(value.registeredAt).toLocaleString()}</p>
+                                    <p class="text-green-400 font-semibold">Status: ${value.status || 'active'}</p>
+                                </div>
+                                <div class="text-right">
+                                    <button data-user-id="${value.userId}" class="delete-user-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        usersContainer.appendChild(userItem);
+                    }
+                });
+                
+                if (!hasItems) {
+                    usersContainer.innerHTML = `<p class="text-center py-4">No ${filter} user registrations found.</p>`;
+                }
+            }).catch(err => {
+                console.error(err);
+                usersContainer.innerHTML = '<p class="text-center py-4 text-red-400">Error loading users.</p>';
+            });
+        }
+
+        // Delete user registration
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-user-btn')) {
+                if (confirm('Are you sure you want to delete this user registration?')) {
+                    const userId = e.target.dataset.userId;
+                    const usersRef = ref(db, 'userRegistrations');
+                    const snapshot = await get(usersRef);
+                    const data = snapshot.val();
+                    
+                    if (data) {
+                        Object.entries(data).forEach(([key, value]) => {
+                            if (value.userId === userId) {
+                                remove(ref(db, `userRegistrations/${key}`)).then(() => {
+                                    alert('User registration deleted successfully!');
+                                    loadUserRegistrations('all');
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+        });
+
+        // History filter buttons
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                if (button.dataset.filter) {
+                    document.querySelectorAll('.tab-button').forEach(btn => {
+                        btn.classList.remove('bg-blue-600', 'text-white');
+                        btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                    });
+                    button.classList.add('bg-blue-600', 'text-white');
+                    button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                    
+                    loadAllHistory(button.dataset.filter);
+                }
+                
+                if (button.dataset.userFilter) {
+                    document.querySelectorAll('.tab-button').forEach(btn => {
+                        btn.classList.remove('bg-blue-600', 'text-white');
+                        btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                    });
+                    button.classList.add('bg-blue-600', 'text-white');
+                    button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                    
+                    loadUserRegistrations(button.dataset.userFilter);
+                }
+            });
+        });
+
+        // --- Settings Logic ---
+        const toggle = document.getElementById('wallet-toggle');
+        const settingsRef = ref(db, 'settings/isWalletDisabled');
+        const serviceLinkRef = ref(db, 'settings/customerServiceLink');
+        const serviceLinkInput = document.getElementById('customer-service-link');
+        const qrCodeUrlRef = ref(db, 'settings/qrCodeUrl');
+        const qrCodeUrlInput = document.getElementById('qr-code-url');
+        const currentQRPreview = document.getElementById('current-qr-preview');
+
+        // Load settings
+        onValue(settingsRef, (snapshot) => {
+            toggle.checked = snapshot.val() === true;
+        });
+
+        onValue(serviceLinkRef, (snapshot) => {
+            if (snapshot.exists()) {
+                serviceLinkInput.value = snapshot.val();
+            }
+        });
+
+        // Load current QR code
+        onValue(qrCodeUrlRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const currentQR = snapshot.val();
+                qrCodeUrlInput.value = currentQR;
+                currentQRPreview.src = currentQR;
+            } else {
+                // Set default QR code
+                const defaultQR = "https://uploads.onecompiler.io/442ktgsjd/442kse9uk/1000000407.jpg";
+                qrCodeUrlInput.value = defaultQR;
+                currentQRPreview.src = defaultQR;
+            }
+        });
+
+        toggle.addEventListener('change', () => {
+            set(settingsRef, toggle.checked).then(() => {
+                alert('Wallet settings updated!');
+            });
+        });
+
+        document.getElementById('save-service-link').addEventListener('click', () => {
+            const link = serviceLinkInput.value.trim();
+            if (link) {
+                set(serviceLinkRef, link).then(() => {
+                    alert('Customer service link updated!');
+                });
+            } else {
+                alert('Please enter a valid link.');
+            }
+        });
+
+        // Save QR Code
+        document.getElementById('save-qr-code').addEventListener('click', () => {
+            const qrUrl = qrCodeUrlInput.value.trim();
+            if (qrUrl) {
+                // Validate if it's a valid image URL
+                if (!qrUrl.startsWith('http')) {
+                    alert('Please enter a valid image URL starting with http:// or https://');
+                    return;
+                }
+                
+                set(qrCodeUrlRef, qrUrl).then(() => {
+                    alert('QR Code updated successfully! Users will see the new QR code immediately.');
+                    currentQRPreview.src = qrUrl;
+                }).catch(err => {
+                    alert('Error updating QR code: ' + err.message);
+                });
+            } else {
+                alert('Please enter a valid QR code image URL.');
+            }
+        });
+
+        // Initial Load
+        loadRequests();
+    </script>
+
+</body>
+</html>
